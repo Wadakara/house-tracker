@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Ledger — House Construction Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDEAE3;
+  --bg-texture:#E6E2D8;
+  --surface:#FFFFFF;
+  --surface-sunken:#F5F3ED;
+  --ink:#24241F;
+  --ink-soft:#5C5A4F;
+  --ink-faint:#8C8A7D;
+  --line:rgba(36,36,31,0.12);
+  --line-strong:rgba(36,36,31,0.22);
+  --brick:#B5532C;
+  --brick-dark:#8F3F20;
+  --brick-tint:#FBEAE2;
+  --steel:#4A5568;
+  --steel-tint:#E9EDF2;
+  --cure:#3D6B35;
+  --cure-tint:#E7EFE2;
+  --sand:#A66A1E;
+  --sand-tint:#F8EBDA;
+  --tape:#A3342B;
+  --tape-tint:#FBE7E5;
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:16px;
+  --font-display:'Fraunces',serif;
+  --font-body:'IBM Plex Sans',-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1C1B17;
+    --bg-texture:#211F1A;
+    --surface:#272520;
+    --surface-sunken:#211F1A;
+    --ink:#EDEAE2;
+    --ink-soft:#B4B0A2;
+    --ink-faint:#827F71;
+    --line:rgba(237,234,226,0.12);
+    --line-strong:rgba(237,234,226,0.22);
+    --brick:#E07A4F;
+    --brick-dark:#F2A483;
+    --brick-tint:#3A2620;
+    --steel:#9BACC4;
+    --steel-tint:#262B33;
+    --cure:#86C476;
+    --cure-tint:#1F2B1C;
+    --sand:#E0A862;
+    --sand-tint:#332515;
+    --tape:#E8847B;
+    --tape-tint:#321E1C;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+html{background:var(--bg)}
+body{
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, var(--bg-texture) 39px, var(--bg-texture) 40px),
+    var(--bg);
+  min-height:100vh;
+}
+.page{max-width:820px;margin:0 auto;padding:2rem 1.25rem 4rem}
+
+/* HEADER */
+.site-header{margin-bottom:1.75rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.site-header .mark{display:flex;align-items:center;gap:12px}
+.mark-icon{width:40px;height:40px;border-radius:var(--radius-sm);background:var(--brick);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:18px;flex-shrink:0}
+.site-header h1{font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-0.01em;line-height:1.1}
+.site-header .sub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.02em}
+.sync-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);padding:5px 11px;border-radius:20px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--cure)}
+.sync-dot.loading{background:var(--sand);animation:pulse 1s ease-in-out infinite}
+.sync-dot.error{background:var(--tape)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* BOARD: top metrics like a site progress board */
+.board{background:var(--ink);border-radius:var(--radius-lg);padding:1.5rem 1.5rem 1.25rem;margin-bottom:1.5rem;color:#F2EFE8;position:relative;overflow:hidden}
+.board::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,var(--brick) 0 16px, #F2EFE8 16px 18px, var(--brick) 18px 34px, transparent 34px 36px)}
+.board-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-bottom:1.1rem}
+.board-metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#A8A398;margin-bottom:6px}
+.board-metric .value{font-family:var(--font-mono);font-size:22px;font-weight:500;letter-spacing:-0.01em}
+.board-metric .value.brick{color:#E89572}
+.board-metric .value.cure{color:#9BD487}
+.brick-meter{display:flex;gap:3px;height:18px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,0.08)}
+.brick-seg{flex:1;background:rgba(255,255,255,0.06);position:relative}
+.brick-seg.filled{background:var(--brick)}
+.meter-caption{display:flex;justify-content:space-between;font-size:11px;color:#A8A398;margin-top:6px;font-family:var(--font-mono)}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:1.25rem;overflow-x:auto;padding-bottom:2px}
+.tab{
+  padding:8px 16px;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid transparent;
+  background:none;color:var(--ink-soft);border-radius:20px;white-space:nowrap;font-family:var(--font-body);
+  display:flex;align-items:center;gap:6px;transition:background .12s, color .12s;
+}
+.tab:hover{background:var(--surface)}
+.tab.active{color:var(--ink);background:var(--surface);border-color:var(--line);font-weight:600}
+.tab svg{width:15px;height:15px}
+
+.section{display:none}
+.section.active{display:block;animation:fadein .18s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:1.25rem 1.35rem;margin-bottom:1rem}
+.card-title{font-family:var(--font-display);font-weight:600;font-size:15px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.card-title .eyebrow{font-family:var(--font-body);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:500}
+
+/* DASHBOARD GRIDS */
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media (max-width:640px){.split-grid{grid-template-columns:1fr}}
+.breakdown-row{margin-bottom:12px}
+.breakdown-row:last-child{margin-bottom:0}
+.breakdown-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:5px}
+.breakdown-amount{font-family:var(--font-mono);font-weight:500}
+.bar-wrap{background:var(--surface-sunken);border-radius:20px;height:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:20px}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:11.5px;font-weight:500;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em}
+input,select{
+  width:100%;padding:9px 11px;font-size:14px;font-family:var(--font-body);
+  border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--ink);
+}
+input[type=number]{font-family:var(--font-mono)}
+input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0 3px var(--brick-tint)}
+.calc-strip{display:flex;align-items:center;gap:10px;background:var(--surface-sunken);border:1px dashed var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--ink-soft)}
+.calc-strip .total{margin-left:auto;font-family:var(--font-mono);font-weight:600;color:var(--ink);font-size:15px}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.toggle-row label{font-size:13px;color:var(--ink-soft);cursor:pointer;user-select:none}
+.toggle-row input[type=checkbox]{width:auto;accent-color:var(--brick);cursor:pointer}
+
+/* BUTTONS */
+.btn{
+  padding:10px 20px;font-size:13.5px;font-weight:600;cursor:pointer;border-radius:var(--radius-sm);
+  font-family:var(--font-body);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  display:inline-flex;align-items:center;gap:6px;transition:transform .08s, background .12s;
+}
+.btn:hover{background:var(--surface-sunken)}
+.btn:active{transform:scale(0.97)}
+.btn:disabled{opacity:0.55;cursor:default;transform:none}
+.btn-primary{background:var(--brick);border-color:var(--brick);color:#fff}
+.btn-primary:hover{background:var(--brick-dark)}
+.btn-icon{padding:7px;border-radius:var(--radius-sm)}
+.btn-danger-ghost{border-color:var(--tape);color:var(--tape);background:transparent}
+.btn-danger-ghost:hover{background:var(--tape-tint)}
+.btn-sm{padding:6px 10px;font-size:12px}
+
+/* TABLE */
+.ledger-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.ledger-table th{
+  text-align:left;padding:9px 12px;font-size:10.5px;font-weight:600;color:var(--ink-faint);
+  border-bottom:1px solid var(--line-strong);text-transform:uppercase;letter-spacing:.06em;
+  background:var(--surface-sunken);position:sticky;top:0;
+}
+.ledger-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.ledger-table tr:last-child td{border-bottom:none}
+.ledger-table tr:hover td{background:var(--surface-sunken)}
+.amount-cell{font-family:var(--font-mono);font-weight:600;text-align:right;white-space:nowrap}
+.qty-note{font-size:11.5px;color:var(--ink-faint);margin-top:2px;font-family:var(--font-mono)}
+.row-actions{display:flex;gap:4px;justify-content:flex-end}
+.date-cell{color:var(--ink-soft);font-size:12px;white-space:nowrap;font-family:var(--font-mono)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.01em}
+.badge-material{background:var(--brick-tint);color:var(--brick-dark)}
+.badge-labour{background:var(--cure-tint);color:var(--cure)}
+.badge-transport{background:var(--sand-tint);color:var(--sand)}
+.badge-other{background:var(--steel-tint);color:var(--steel)}
+
+/* EMPTY / LOADING */
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--ink-faint);font-size:13.5px}
+.empty svg{width:32px;height:32px;margin-bottom:10px;opacity:.4}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--line-strong);border-top-color:var(--brick);border-radius:50%;animation:spin .7s linear infinite;margin-right:7px;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.alert-success{background:var(--cure-tint);color:var(--cure)}
+.alert-danger{background:var(--tape-tint);color:var(--tape)}
+
+/* FUND ROWS */
+.fund-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);gap:10px}
+.fund-row:last-child{border-bottom:none}
+.fund-source{font-size:13.5px;font-weight:500}
+.fund-date{font-size:11.5px;color:var(--ink-faint);font-family:var(--font-mono);margin-top:2px}
+.fund-amount{font-family:var(--font-mono);font-weight:600;color:var(--cure);white-space:nowrap}
+
+/* FILTERS */
+.filter-row{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.filter-row select{width:auto;padding:7px 10px;font-size:12.5px}
+
+/* CONFIG / SETTINGS */
+.config-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem;max-width:480px;margin-left:auto;margin-right:auto;margin-top:3rem}
+.config-card .config-icon{width:44px;height:44px;border-radius:var(--radius-sm);background:var(--brick);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.config-card h2{font-family:var(--font-display);font-size:19px;margin-bottom:6px}
+.config-card p{font-size:13px;color:var(--ink-soft);margin-bottom:14px;line-height:1.5}
+.url-mono{font-size:12px;word-break:break-all;color:var(--ink-faint);font-family:var(--font-mono);background:var(--surface-sunken);padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:14px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(36,36,31,0.5);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;max-width:380px;width:100%;border:1px solid var(--line)}
+.modal h3{font-family:var(--font-display);font-size:17px;margin-bottom:8px}
+.modal p{font-size:13.5px;color:var(--ink-soft);margin-bottom:18px;line-height:1.5}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+.list-card{padding:0;overflow:hidden}
+.list-card-scroll{max-height:560px;overflow-y:auto}
+.list-card-foot{padding:10px 16px;font-size:12.5px;color:var(--ink-soft);border-top:1px solid var(--line);font-family:var(--font-mono);background:var(--surface-sunken)}
+</style>
+</head>
+<body>
+<div class="page">
+  <h2 class="sr-only">Site Ledger — shared house construction expense tracker</h2>
+
+  <!-- CONFIG SCREEN -->
+  <div id="config-section" class="config-card" style="display:none">
+    <div class="config-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 9h1m-1 4h1m4-4h1m-1 4h1M9 21v-4a3 3 0 0 1 6 0v4"/></svg>
+    </div>
+    <h2>Connect your site ledger</h2>
+    <p>Paste the Google Apps Script web app URL (ends in <code>/exec</code>). This connects your device to the shared sheet — saved locally, only needs to be entered once per device.</p>
+    <div class="form-group" style="margin-bottom:10px"><input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/XXXXX/exec"></div>
+    <button class="btn btn-primary" onclick="saveApiUrl()" style="width:100%;justify-content:center">Connect</button>
+    <div id="config-alert"></div>
+  </div>
+
+  <div id="main-app" style="display:none">
+    <div class="site-header">
+      <div class="mark">
+        <div class="mark-icon">S</div>
+        <div>
+          <h1>Site Ledger</h1>
+          <div class="sub">Family house construction tracker</div>
+        </div>
+      </div>
+      <div class="sync-pill"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Synced</span></div>
+    </div>
+
+    <!-- PROGRESS BOARD -->
+    <div class="board">
+      <div class="board-grid">
+        <div class="board-metric">
+          <div class="label">Fund raised</div>
+          <div class="value" id="board-fund">—</div>
+        </div>
+        <div class="board-metric">
+          <div class="label">Spent so far</div>
+          <div class="value brick" id="board-spent">—</div>
+        </div>
+        <div class="board-metric">
+          <div class="label">Balance left</div>
+          <div class="value cure" id="board-balance">—</div>
+        </div>
+      </div>
+      <div class="brick-meter" id="brick-meter"></div>
+      <div class="meter-caption"><span id="meter-pct">0% used</span><span id="meter-count">0 entries</span></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabbtn-dashboard" onclick="showTab('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="tab" id="tabbtn-add" onclick="showTab('add')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Add entry
+      </button>
+      <button class="tab" id="tabbtn-expenses" onclick="showTab('expenses')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        Expenses
+      </button>
+      <button class="tab" id="tabbtn-funds" onclick="showTab('funds')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h2"/></svg>
+        Fund
+      </button>
+      <button class="tab" id="tabbtn-settings" onclick="showTab('settings')" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="section active">
+      <div id="dash-loading" class="empty"><span class="spinner"></span>Loading the ledger...</div>
+      <div id="dash-content" style="display:none">
+        <div class="split-grid">
+          <div class="card">
+            <div class="card-title">By category</div>
+            <div id="cat-breakdown"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent activity</div>
+            <div id="recent-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD ENTRY -->
+    <div id="tab-add" class="section">
+      <div class="card">
+        <div class="card-title">New expense entry<span class="eyebrow" id="form-mode-label">Adding</span></div>
+        <div id="add-alert"></div>
+        <input type="hidden" id="f-id">
+        <div class="form-row">
+          <div class="form-group"><label>Date</label><input type="date" id="f-date"></div>
+          <div class="form-group"><label>Category</label>
+            <select id="f-cat"><option value="material">Material</option><option value="labour">Labour</option><option value="transport">Transport</option><option value="other">Other</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column:1/-1"><label>Item / description</label><input type="text" id="f-desc" placeholder="e.g. Bricks, Mason labour — 3 days"></div>
+        </div>
+
+        <div class="toggle-row">
+          <input type="checkbox" id="f-has-unit" onchange="toggleUnitMode()" checked>
+          <label for="f-has-unit">This item has a unit price and quantity (e.g. bricks, cement bags)</label>
+        </div>
+
+        <div id="unit-fields">
+          <div class="form-row">
+            <div class="form-group"><label>Unit</label><input type="text" id="f-unit" placeholder="e.g. bag, nos, kg, cu.ft"></div>
+            <div class="form-group"><label>Unit price (LKR)</label><input type="number" id="f-unitprice" placeholder="0" min="0" oninput="calcTotal()"></div>
+            <div class="form-group"><label>Quantity</label><input type="number" id="f-qty" placeholder="0" min="0" oninput="calcTotal()"></div>
+          </div>
+          <div class="calc-strip">
+            <span>Unit price × Quantity =</span>
+            <span class="total" id="calc-total">LKR 0</span>
+          </div>
+        </div>
+
+        <div class="form-row" id="direct-amount-row" style="display:none">
+          <div class="form-group"><label>Amount (LKR)</label><input type="number" id="f-amount-direct" placeholder="0" min="0"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Supplier / paid to</label><input type="text" id="f-supplier" placeholder="Optional"></div>
+          <div class="form-group"><label>Notes</label><input type="text" id="f-notes" placeholder="Optional"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="saveExpense()" id="add-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            <span id="add-btn-text">Save entry</span>
+          </button>
+          <button class="btn" id="cancel-edit-btn" style="display:none" onclick="resetForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPENSES LIST -->
+    <div id="tab-expenses" class="section">
+      <div class="filter-row">
+        <select id="fil-cat" onchange="renderExpenses()"><option value="">All categories</option><option value="material">Material</option><option value="labour">Labour</option><option value="transport">Transport</option><option value="other">Other</option></select>
+        <button class="btn btn-sm btn-icon" onclick="refreshAll()" aria-label="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+      <div class="card list-card">
+        <div class="list-card-scroll"><div id="expenses-table"><div class="empty"><span class="spinner"></span>Loading...</div></div></div>
+        <div class="list-card-foot" id="expenses-total"></div>
+      </div>
+    </div>
+
+    <!-- FUNDS -->
+    <div id="tab-funds" class="section">
+      <div class="split-grid" style="margin-bottom:1rem">
+        <div class="card">
+          <div class="card-title">Add funds<span class="eyebrow">Top up</span></div>
+          <div id="fund-alert"></div>
+          <div class="form-group" style="margin-bottom:10px"><label>Date</label><input type="date" id="fund-date"></div>
+          <div class="form-group" style="margin-bottom:10px"><label>Amount (LKR)</label><input type="number" id="fund-amount" placeholder="0"></div>
+          <div class="form-group" style="margin-bottom:14px"><label>Source</label><input type="text" id="fund-source" placeholder="e.g. Monthly savings"></div>
+          <button class="btn btn-primary" onclick="addFund()" style="width:100%;justify-content:center">Add funds</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Fund summary</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="breakdown-row"><div class="breakdown-head"><span>Total raised</span><span class="breakdown-amount" id="f-total-added">—</span></div></div>
+            <div class="breakdown-row"><div class="breakdown-head"><span>Total spent</span><span class="breakdown-amount" id="f-total-spent">—</span></div></div>
+            <div class="breakdown-row" style="border-top:1px solid var(--line);padding-top:10px"><div class="breakdown-head"><span style="font-weight:600">Balance</span><span class="breakdown-amount" id="f-balance" style="font-size:16px">—</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card list-card">
+        <div class="card-title" style="padding:1.25rem 1.35rem 0">Fund history</div>
+        <div style="padding:0 1.35rem 1rem"><div id="fund-history"><div class="empty"><span class="spinner"></span>Loading...</div></div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="section">
+      <div class="card">
+        <div class="card-title">Connection</div>
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:10px">Currently connected to:</p>
+        <div class="url-mono" id="current-url"></div>
+        <div class="form-group" style="margin-bottom:10px"><input type="text" id="api-url-input-2" placeholder="Paste new web app URL"></div>
+        <button class="btn" onclick="updateApiUrl()">Update URL</button>
+        <div id="settings-alert"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>Delete this entry?</h3>
+    <p id="delete-modal-text">This will permanently remove the entry from the shared ledger. This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger-ghost" onclick="confirmDelete()">Delete entry</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'house_tracker_api_url';
+let API_URL = localStorage.getItem(STORAGE_KEY) || '';
+let expenses = [];
+let funds = [];
+let pendingDelete = null; // {type:'expense'|'fund', id:...}
+let editingId = null;
+
+function fmt(n){return'LKR '+Number(n||0).toLocaleString('en-LK',{maximumFractionDigits:0});}
+function pct(a,b){return b?Math.round(a/b*100):0;}
+
+function init(){
+  if(!API_URL){
+    document.getElementById('config-section').style.display='block';
+    document.getElementById('main-app').style.display='none';
+  }else{
+    document.getElementById('config-section').style.display='none';
+    document.getElementById('main-app').style.display='block';
+    document.getElementById('current-url').textContent=API_URL;
+    document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('fund-date').value=new Date().toISOString().slice(0,10);
+    toggleUnitMode();
+    refreshAll();
+  }
+}
+
+function saveApiUrl(){
+  const val=document.getElementById('api-url-input').value.trim();
+  const alertBox=document.getElementById('config-alert');
+  if(!val.includes('script.google.com')){
+    alertBox.innerHTML='<div class="alert alert-danger">That doesn\'t look like a valid Google Apps Script URL.</div>';
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, val);
+  API_URL = val;
+  init();
+}
+
+function updateApiUrl(){
+  const val=document.getElementById('api-url-input-2').value.trim();
+  const alertBox=document.getElementById('settings-alert');
+  if(!val.includes('script.google.com')){
+    alertBox.innerHTML='<div class="alert alert-danger">That doesn\'t look like a valid Google Apps Script URL.</div>';
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, val);
+  API_URL = val;
+  document.getElementById('current-url').textContent=API_URL;
+  alertBox.innerHTML='<div class="alert alert-success">Updated. Refreshing...</div>';
+  setTimeout(refreshAll, 600);
+}
+
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.getElementById('tabbtn-'+t).classList.add('active');
+  if(t==='dashboard')renderDashboard();
+  if(t==='expenses')renderExpenses();
+  if(t==='funds')renderFunds();
+}
+
+function toggleUnitMode(){
+  const has = document.getElementById('f-has-unit').checked;
+  document.getElementById('unit-fields').style.display = has ? 'block' : 'none';
+  document.getElementById('direct-amount-row').style.display = has ? 'none' : 'block';
+}
+
+function calcTotal(){
+  const up = parseFloat(document.getElementById('f-unitprice').value) || 0;
+  const qty = parseFloat(document.getElementById('f-qty').value) || 0;
+  document.getElementById('calc-total').textContent = fmt(up * qty);
+}
+
+function setSyncState(state){
+  const dot=document.getElementById('sync-dot');
+  const text=document.getElementById('sync-text');
+  dot.className='sync-dot'+(state==='loading'?' loading':state==='error'?' error':'');
+  text.textContent = state==='loading' ? 'Syncing...' : state==='error' ? 'Sync failed' : 'Synced';
+}
+
+async function apiCall(params){
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Network error');
+  return res.json();
+}
+
+async function refreshAll(){
+  setSyncState('loading');
+  try{
+    const [expRes, fundRes] = await Promise.all([
+      apiCall({action:'getExpenses'}),
+      apiCall({action:'getFunds'})
+    ]);
+    if(expRes.error || fundRes.error){
+      showSetupError(expRes.error || fundRes.error);
+      setSyncState('error');
+      return;
+    }
+    expenses = (expRes.data||[]).map(r=>({
+      id:r.ID, date:r.Date, category:r.Category, desc:r.Description,
+      unit:r.Unit, unitPrice:r.UnitPrice, quantity:r.Quantity,
+      amount:Number(r.Amount)||0, supplier:r.Supplier, notes:r.Notes
+    })).filter(e=>e.id);
+    funds = (fundRes.data||[]).map(r=>({
+      id:r.ID, date:r.Date, amount:Number(r.Amount)||0, source:r.Source
+    })).filter(f=>f.id);
+    setSyncState('idle');
+    renderDashboard();
+    if(document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
+    if(document.getElementById('tab-funds').classList.contains('active')) renderFunds();
+  }catch(err){
+    showSetupError(err.message);
+    setSyncState('error');
+  }
+}
+
+function showSetupError(msg){
+  document.getElementById('dash-loading').innerHTML =
+    '<div class="alert alert-danger">Could not load the ledger. Check sheet tab names ("Expenses","Funds"), headers, and that deployment access is "Anyone". ('+(msg||'unknown error')+')</div>';
+}
+
+function resetForm(){
+  editingId = null;
+  document.getElementById('f-id').value='';
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('f-cat').value='material';
+  document.getElementById('f-desc').value='';
+  document.getElementById('f-unit').value='';
+  document.getElementById('f-unitprice').value='';
+  document.getElementById('f-qty').value='';
+  document.getElementById('f-amount-direct').value='';
+  document.getElementById('f-supplier').value='';
+  document.getElementById('f-notes').value='';
+  document.getElementById('f-has-unit').checked=true;
+  toggleUnitMode();
+  calcTotal();
+  document.getElementById('form-mode-label').textContent='Adding';
+  document.getElementById('add-btn-text').textContent='Save entry';
+  document.getElementById('cancel-edit-btn').style.display='none';
+  document.getElementById('add-alert').innerHTML='';
+}
+
+function editExpense(id){
+  const e = expenses.find(x=>String(x.id)===String(id));
+  if(!e) return;
+  editingId = id;
+  document.getElementById('f-id').value=e.id;
+  document.getElementById('f-date').value=e.date ? new Date(e.date).toISOString().slice(0,10) : '';
+  document.getElementById('f-cat').value=e.category||'material';
+  document.getElementById('f-desc').value=e.desc||'';
+  const hasUnit = e.unit || e.unitPrice || e.quantity;
+  document.getElementById('f-has-unit').checked = !!hasUnit;
+  document.getElementById('f-unit').value=e.unit||'';
+  document.getElementById('f-unitprice').value=e.unitPrice||'';
+  document.getElementById('f-qty').value=e.quantity||'';
+  document.getElementById('f-amount-direct').value=hasUnit ? '' : e.amount;
+  document.getElementById('f-supplier').value=e.supplier||'';
+  document.getElementById('f-notes').value=e.notes||'';
+  toggleUnitMode();
+  calcTotal();
+  document.getElementById('form-mode-label').textContent='Editing';
+  document.getElementById('add-btn-text').textContent='Update entry';
+  document.getElementById('cancel-edit-btn').style.display='inline-flex';
+  showTab('add');
+  document.getElementById('tabbtn-add').click ? null : null;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tabbtn-add').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function saveExpense(){
+  const date=document.getElementById('f-date').value;
+  const category=document.getElementById('f-cat').value;
+  const desc=document.getElementById('f-desc').value.trim();
+  const hasUnit=document.getElementById('f-has-unit').checked;
+  const unit=document.getElementById('f-unit').value.trim();
+  const unitPrice=parseFloat(document.getElementById('f-unitprice').value)||0;
+  const qty=parseFloat(document.getElementById('f-qty').value)||0;
+  const directAmount=parseFloat(document.getElementById('f-amount-direct').value)||0;
+  const supplier=document.getElementById('f-supplier').value.trim();
+  const notes=document.getElementById('f-notes').value.trim();
+  const alertBox=document.getElementById('add-alert');
+
+  let amount = hasUnit ? (unitPrice*qty) : directAmount;
+
+  if(!date||!desc||!amount||amount<=0){
+    alertBox.innerHTML='<div class="alert alert-danger">Please fill in date, description, and a valid amount.</div>';
+    return;
+  }
+  const btn=document.getElementById('add-btn');
+  btn.disabled=true;
+  const payload = {
+    date, category, description:desc,
+    unit: hasUnit ? unit : '',
+    unitPrice: hasUnit ? unitPrice : '',
+    quantity: hasUnit ? qty : '',
+    amount, supplier, notes
+  };
+  const action = editingId ? 'updateExpense' : 'addExpense';
+  if(editingId) payload.id = editingId; else payload.id = Date.now();
+
+  apiCall(Object.assign({action}, payload))
+    .then(res=>{
+      btn.disabled=false;
+      if(res.error){ alertBox.innerHTML='<div class="alert alert-danger">'+res.error+'</div>'; return; }
+      alertBox.innerHTML='<div class="alert alert-success">'+(editingId?'Entry updated.':'Saved '+fmt(amount)+' to the ledger.')+'</div>';
+      const wasEditing = editingId;
+      resetForm();
+      if(!wasEditing) setTimeout(()=>{document.getElementById('add-alert').innerHTML='';},2500);
+      refreshAll();
+    })
+    .catch(err=>{
+      btn.disabled=false;
+      alertBox.innerHTML='<div class="alert alert-danger">Failed to save: '+err.message+'</div>';
+    });
+}
+
+function requestDeleteExpense(id){
+  pendingDelete = {type:'expense', id};
+  document.getElementById('delete-modal-text').textContent = 'This will permanently remove this expense entry from the shared ledger. This cannot be undone.';
+  document.getElementById('delete-modal').classList.add('open');
+}
+function requestDeleteFund(id){
+  pendingDelete = {type:'fund', id};
+  document.getElementById('delete-modal-text').textContent = 'This will permanently remove this fund entry from the shared ledger. This cannot be undone.';
+  document.getElementById('delete-modal').classList.add('open');
+}
+function closeDeleteModal(){
+  pendingDelete = null;
+  document.getElementById('delete-modal').classList.remove('open');
+}
+function confirmDelete(){
+  if(!pendingDelete) return;
+  const action = pendingDelete.type==='expense' ? 'deleteExpense' : 'deleteFund';
+  apiCall({action, id:pendingDelete.id}).then(res=>{
+    closeDeleteModal();
+    refreshAll();
+  }).catch(()=>{ closeDeleteModal(); });
+}
+
+function addFund(){
+  const date=document.getElementById('fund-date').value;
+  const amount=parseFloat(document.getElementById('fund-amount').value);
+  const source=document.getElementById('fund-source').value.trim();
+  const alertBox=document.getElementById('fund-alert');
+  if(!date||!amount||amount<=0){
+    alertBox.innerHTML='<div class="alert alert-danger">Please enter a date and amount.</div>';
+    return;
+  }
+  apiCall({action:'addFund', id:Date.now(), date, amount, source})
+    .then(res=>{
+      if(res.error){ alertBox.innerHTML='<div class="alert alert-danger">'+res.error+'</div>'; return; }
+      ['fund-date','fund-amount','fund-source'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('fund-date').value=new Date().toISOString().slice(0,10);
+      alertBox.innerHTML='<div class="alert alert-success">'+fmt(amount)+' added.</div>';
+      setTimeout(()=>alertBox.innerHTML='',2500);
+      refreshAll();
+    })
+    .catch(err=>{ alertBox.innerHTML='<div class="alert alert-danger">Failed: '+err.message+'</div>'; });
+}
+
+function catBadge(c){const map={material:'badge-material',labour:'badge-labour',transport:'badge-transport',other:'badge-other'};return'<span class="badge '+(map[c]||'badge-other')+'">'+(c||'other')+'</span>';}
+
+function renderDashboard(){
+  document.getElementById('dash-loading').style.display='none';
+  document.getElementById('dash-content').style.display='block';
+  const totalFunds=funds.reduce((s,f)=>s+f.amount,0);
+  const totalSpent=expenses.reduce((s,e)=>s+e.amount,0);
+  const balance=totalFunds-totalSpent;
+  const pctUsed=pct(totalSpent,totalFunds);
+
+  document.getElementById('board-fund').textContent=fmt(totalFunds);
+  document.getElementById('board-spent').textContent=fmt(totalSpent);
+  document.getElementById('board-balance').textContent=fmt(balance);
+  document.getElementById('meter-pct').textContent=pctUsed+'% of fund used';
+  document.getElementById('meter-count').textContent=expenses.length+' entries';
+
+  const segCount=20;
+  const filledSegs=Math.round((Math.min(pctUsed,100)/100)*segCount);
+  let segHtml='';
+  for(let i=0;i<segCount;i++){
+    segHtml+='<div class="brick-seg'+(i<filledSegs?' filled':'')+'"></div>';
+  }
+  document.getElementById('brick-meter').innerHTML=segHtml;
+
+  const cats={material:0,labour:0,transport:0,other:0};
+  expenses.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.amount;});
+  const catColors={material:'var(--brick)',labour:'var(--cure)',transport:'var(--sand)',other:'var(--steel)'};
+
+  let catHtml='';
+  Object.entries(cats).forEach(([c,v])=>{
+    if(!v)return;
+    const p=pct(v,totalSpent);
+    catHtml+='<div class="breakdown-row"><div class="breakdown-head">'+catBadge(c)+'<span class="breakdown-amount">'+fmt(v)+'</span></div><div class="bar-wrap"><div class="bar-fill" style="width:'+p+'%;background:'+catColors[c]+'"></div></div></div>';
+  });
+  document.getElementById('cat-breakdown').innerHTML=catHtml||'<div class="empty">No expenses logged yet</div>';
+
+  const recent=[...expenses].sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,6);
+  if(!recent.length){document.getElementById('recent-list').innerHTML='<div class="empty">No expenses logged yet</div>';return;}
+  let rHtml='';
+  recent.forEach(e=>{
+    rHtml+='<div class="breakdown-row"><div class="breakdown-head"><span style="font-weight:500">'+e.desc+'</span><span class="breakdown-amount">'+fmt(e.amount)+'</span></div><div style="font-size:11.5px;color:var(--ink-faint);font-family:var(--font-mono)">'+e.date+'</div></div>';
+  });
+  document.getElementById('recent-list').innerHTML=rHtml;
+}
+
+function renderExpenses(){
+  const catF=document.getElementById('fil-cat').value;
+  let filtered=[...expenses].filter(e=>(!catF||e.category===catF)).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  const total=filtered.reduce((s,e)=>s+e.amount,0);
+  if(!filtered.length){
+    document.getElementById('expenses-table').innerHTML='<div class="empty">No expenses match this filter.</div>';
+    document.getElementById('expenses-total').textContent='';
+    return;
+  }
+  let html='<table class="ledger-table"><thead><tr><th>Date</th><th>Item</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>';
+  filtered.forEach(e=>{
+    const qtyNote = (e.unit||e.quantity||e.unitPrice) ? '<div class="qty-note">'+(e.quantity||'')+' '+(e.unit||'')+(e.unitPrice?' @ '+fmt(e.unitPrice):'')+'</div>' : '';
+    html+='<tr>'+
+      '<td class="date-cell">'+e.date+'</td>'+
+      '<td><div>'+e.desc+'</div>'+qtyNote+(e.supplier?'<div class="qty-note">'+e.supplier+'</div>':'')+'</td>'+
+      '<td>'+catBadge(e.category)+'</td>'+
+      '<td class="amount-cell">'+fmt(e.amount)+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="btn btn-sm btn-icon" onclick="editExpense(\''+e.id+'\')" aria-label="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>'+
+        '<button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteExpense(\''+e.id+'\')" aria-label="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button>'+
+      '</div></td>'+
+    '</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('expenses-table').innerHTML=html;
+  document.getElementById('expenses-total').textContent=filtered.length+' entries — Total '+fmt(total);
+}
+
+function renderFunds(){
+  const totalFunds=funds.reduce((s,f)=>s+f.amount,0);
+  const totalSpent=expenses.reduce((s,e)=>s+e.amount,0);
+  document.getElementById('f-total-added').textContent=fmt(totalFunds);
+  document.getElementById('f-total-spent').textContent=fmt(totalSpent);
+  document.getElementById('f-balance').textContent=fmt(totalFunds-totalSpent);
+  const sorted=[...funds].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!sorted.length){document.getElementById('fund-history').innerHTML='<div class="empty">No fund entries yet</div>';return;}
+  let html='';
+  sorted.forEach(f=>{
+    html+='<div class="fund-row"><div><div class="fund-source">'+(f.source||'Fund deposit')+'</div><div class="fund-date">'+f.date+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="fund-amount">+'+fmt(f.amount)+'</div><button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteFund(\''+f.id+'\')" aria-label="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button></div></div>';
+  });
+  document.getElementById('fund-history').innerHTML=html;
+}
+
+document.getElementById('delete-modal').addEventListener('click', function(e){
+  if(e.target === this) closeDeleteModal();
+});
+
+init();
+</script>
+</body>
+</html>
