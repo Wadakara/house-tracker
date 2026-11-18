@@ -221,7 +221,37 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
 .list-card{padding:0;overflow:hidden}
 .list-card-scroll{max-height:560px;overflow-y:auto}
 .list-card-foot{padding:10px 16px;font-size:12.5px;color:var(--ink-soft);border-top:1px solid var(--line);font-family:var(--font-mono);background:var(--surface-sunken)}
+
+/* ===== v3 additions ===== */
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:24px;font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:200;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.error{background:var(--tape);color:#fff}
+.alert-warn{background:var(--sand-tint);color:var(--sand)}
+.card.editing{border-color:var(--brick);box-shadow:0 0 0 3px var(--brick-tint)}
+.report-hint{font-size:12.5px;color:var(--ink-soft);line-height:1.55;margin-top:14px}
+.unicode-warn{display:none;margin-bottom:12px;padding:10px 14px;border-radius:var(--radius-sm);background:var(--sand-tint);color:var(--sand);font-size:12.5px;line-height:1.5}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+#print-area{display:none}
+@media print{
+  body.printing{background:#fff !important}
+  body.printing .page,body.printing .toast,body.printing .modal-overlay{display:none !important}
+  body.printing #print-area{display:block;color:#111;font-family:var(--font-body);font-size:11pt}
+  #print-area .pr-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #B5532C;padding-bottom:8px;margin-bottom:14px}
+  #print-area .pr-title{font-family:var(--font-display);font-size:22pt;font-weight:600}
+  #print-area .pr-meta{text-align:right;font-size:9.5pt}
+  #print-area h3{font-size:12pt;margin:16px 0 6px}
+  #print-area .pr-t{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:6px}
+  #print-area .pr-t th,#print-area .pr-t td{border:1px solid #ccc;padding:4px 6px;vertical-align:top;text-align:left}
+  #print-area .pr-t th{background:#f0ece4;font-weight:600}
+  #print-area .pr-t .r{text-align:right}
+  #print-area .pr-t tfoot td{background:#f0ece4}
+  #print-area .pr-small{font-size:8.5pt;color:#555;margin-top:2px}
+  #print-area tr{page-break-inside:avoid}
+  @page{size:A4;margin:14mm}
+}
 </style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 <div class="page">
@@ -250,6 +280,8 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
       </div>
       <div class="sync-pill"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Synced</span></div>
     </div>
+
+    <div id="script-banner"></div>
 
     <!-- PROGRESS BOARD -->
     <div class="board">
@@ -288,6 +320,10 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h2"/></svg>
         Fund
       </button>
+      <button class="tab" id="tabbtn-report" onclick="showTab('report')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+        Report
+      </button>
       <button class="tab" id="tabbtn-settings" onclick="showTab('settings')" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -312,8 +348,8 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
 
     <!-- ADD ENTRY -->
     <div id="tab-add" class="section">
-      <div class="card">
-        <div class="card-title">New expense entry<span class="eyebrow" id="form-mode-label">Adding</span></div>
+      <div class="card" id="entry-card">
+        <div class="card-title"><span id="form-title">New expense entry</span><span class="eyebrow" id="form-mode-label">Adding</span></div>
         <div id="add-alert"></div>
         <input type="hidden" id="f-id">
         <div class="form-row">
@@ -356,7 +392,7 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
             <span id="add-btn-text">Save entry</span>
           </button>
-          <button class="btn" id="cancel-edit-btn" style="display:none" onclick="resetForm()">Cancel</button>
+          <button class="btn" id="cancel-edit-btn" style="display:none" onclick="cancelEdit()">Cancel</button>
         </div>
       </div>
     </div>
@@ -378,13 +414,16 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
     <!-- FUNDS -->
     <div id="tab-funds" class="section">
       <div class="split-grid" style="margin-bottom:1rem">
-        <div class="card">
-          <div class="card-title">Add funds<span class="eyebrow">Top up</span></div>
+        <div class="card" id="fund-card">
+          <div class="card-title"><span id="fund-form-title">Add funds</span><span class="eyebrow" id="fund-form-mode">Top up</span></div>
           <div id="fund-alert"></div>
           <div class="form-group" style="margin-bottom:10px"><label>Date</label><input type="date" id="fund-date"></div>
           <div class="form-group" style="margin-bottom:10px"><label>Amount (LKR)</label><input type="number" id="fund-amount" placeholder="0"></div>
           <div class="form-group" style="margin-bottom:14px"><label>Source</label><input type="text" id="fund-source" placeholder="e.g. Monthly savings"></div>
-          <button class="btn btn-primary" onclick="addFund()" style="width:100%;justify-content:center">Add funds</button>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="fund-btn" onclick="saveFund()" style="flex:1;justify-content:center">Add funds</button>
+            <button class="btn" id="fund-cancel-btn" style="display:none" onclick="resetFundForm()">Cancel</button>
+          </div>
         </div>
         <div class="card">
           <div class="card-title">Fund summary</div>
@@ -398,6 +437,40 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
       <div class="card list-card">
         <div class="card-title" style="padding:1.25rem 1.35rem 0">Fund history</div>
         <div style="padding:0 1.35rem 1rem"><div id="fund-history"><div class="empty"><span class="spinner"></span>Loading...</div></div></div>
+      </div>
+    </div>
+
+    <!-- REPORT -->
+    <div id="tab-report" class="section">
+      <div class="card">
+        <div class="card-title">Download report<span class="eyebrow">PDF</span></div>
+        <div id="report-alert"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Period</label>
+            <select id="rep-period" onchange="onPeriodChange()">
+              <option value="all">All entries</option>
+              <option value="this-month">This month</option>
+              <option value="last-month">Last month</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" id="rep-custom" style="display:none">
+          <div class="form-group"><label>From</label><input type="date" id="rep-from" onchange="updateReportPreview()"></div>
+          <div class="form-group"><label>To</label><input type="date" id="rep-to" onchange="updateReportPreview()"></div>
+        </div>
+        <div class="toggle-row"><input type="checkbox" id="rep-funds" checked onchange="updateReportPreview()"><label for="rep-funds">Include fund history</label></div>
+        <div class="toggle-row"><input type="checkbox" id="rep-notes" checked onchange="updateReportPreview()"><label for="rep-notes">Include notes</label></div>
+        <div class="calc-strip" id="rep-preview"></div>
+        <div class="unicode-warn" id="rep-unicode-warn">Some entries contain non-English text (for example Sinhala). The PDF download can only show English letters and numbers, so use <b>Print view</b> for those entries.</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="downloadReport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download PDF
+          </button>
+          <button class="btn" onclick="printReport()">Print view</button>
+        </div>
+        <p class="report-hint">The report shows the summary, spending by category, every expense with quantity and unit price, and the fund history. The balance always reflects the whole project. <b>Print view</b> opens your browser's print screen: choose "Save as PDF" as the printer.</p>
       </div>
     </div>
 
@@ -418,371 +491,722 @@ input:focus,select:focus{outline:none;border-color:var(--brick);box-shadow:0 0 0
 <!-- DELETE CONFIRMATION MODAL -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
-    <h3>Delete this entry?</h3>
+    <h3 id="delete-modal-title">Delete this entry?</h3>
     <p id="delete-modal-text">This will permanently remove the entry from the shared ledger. This cannot be undone.</p>
     <div class="modal-actions">
       <button class="btn" onclick="closeDeleteModal()">Cancel</button>
-      <button class="btn btn-danger-ghost" onclick="confirmDelete()">Delete entry</button>
+      <button class="btn btn-danger-ghost" id="delete-confirm-btn" onclick="confirmDelete()">Delete entry</button>
     </div>
   </div>
 </div>
 
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="print-area"></div>
+
 <script>
+/* ================= SITE LEDGER v3 ================= */
 const STORAGE_KEY = 'house_tracker_api_url';
-let API_URL = localStorage.getItem(STORAGE_KEY) || '';
+const MIN_SCRIPT_VERSION = 3;
+let API_URL = '';
+try { API_URL = localStorage.getItem(STORAGE_KEY) || ''; } catch (e) {}
 let expenses = [];
 let funds = [];
-let pendingDelete = null; // {type:'expense'|'fund', id:...}
-let editingId = null;
+let pendingDelete = null;      // {type:'expense'|'fund', id, label}
+let editingId = null;          // expense being edited
+let editingFundId = null;      // fund entry being edited
+let toastTimer = null;
 
-function fmt(n){return'LKR '+Number(n||0).toLocaleString('en-LK',{maximumFractionDigits:0});}
-function pct(a,b){return b?Math.round(a/b*100):0;}
+/*REPORT_START*/
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function init(){
-  if(!API_URL){
-    document.getElementById('config-section').style.display='block';
-    document.getElementById('main-app').style.display='none';
-  }else{
-    document.getElementById('config-section').style.display='none';
-    document.getElementById('main-app').style.display='block';
-    document.getElementById('current-url').textContent=API_URL;
-    document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
-    document.getElementById('fund-date').value=new Date().toISOString().slice(0,10);
+function fmtNum(n) { return Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function isoLocal(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function todayLocal() { return isoLocal(new Date()); }
+
+// Always returns a plain calendar date "YYYY-MM-DD" with no timezone arithmetic on normal values.
+function normDate(v) {
+  if (!v) return '';
+  if (v instanceof Date) return isNaN(v) ? '' : isoLocal(v);
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);                 // legacy ISO date-times from an old script version
+  return isNaN(d) ? s : isoLocal(d);
+}
+
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  return m ? (parseInt(m[3], 10) + ' ' + MONTHS[parseInt(m[2], 10) - 1] + ' ' + m[1]) : (iso || '');
+}
+
+// jsPDF's built-in fonts only cover Latin text, so anything else is flagged / replaced.
+function pdfSafe(s) {
+  return String(s == null ? '' : s)
+    .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-').replace(/\u2026/g, '...')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '?');
+}
+function hasUnsupported(s) {
+  return /[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF\u2018\u2019\u201C\u201D\u2013\u2014\u2026]/.test(String(s == null ? '' : s));
+}
+
+function itemText(e, includeNotes) {
+  let t = e.desc || '';
+  if (e.unit || e.quantity || e.unitPrice) {
+    const q = [];
+    if (e.quantity) q.push(fmtNum(e.quantity));
+    if (e.unit) q.push(e.unit);
+    const line = q.join(' ') + (e.unitPrice ? ' @ LKR ' + fmtNum(e.unitPrice) : '');
+    if (line.trim()) t += '\n' + line.trim();
+  }
+  if (includeNotes && e.notes) t += '\nNote: ' + e.notes;
+  return pdfSafe(t);
+}
+
+function buildReportPdf(jsPDF, d) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 14;
+  const BRICK = [181, 83, 44], INK = [36, 36, 31], SOFT = [92, 90, 79], LINE = [222, 218, 208],
+        SAND = [246, 244, 238], TAPE = [163, 52, 43], WHITE = [255, 255, 255];
+  const sum = a => a.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const money = n => 'LKR ' + fmtNum(n);
+  const cap = s => { s = String(s || 'other'); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const idNum = e => Number(e.id) || 0;
+  let y = 0;
+
+  // ---- header band
+  doc.setFillColor(...BRICK); doc.rect(0, 0, W, 28, 'F');
+  doc.setFillColor(...INK);   doc.rect(0, 28, W, 1.6, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFont('helvetica', 'bold');   doc.setFontSize(20); doc.text('Site Ledger', M, 13);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text('House construction expense report', M, 20.5);
+  doc.setFontSize(9);
+  doc.text('Generated ' + fmtDate(d.generated), W - M, 13, { align: 'right' });
+  doc.text(pdfSafe(d.range.label), W - M, 20.5, { align: 'right' });
+  y = 38;
+
+  const common = {
+    margin: { left: M, right: M, top: 18, bottom: 18 },
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 8.5, textColor: INK, cellPadding: 2.2, lineColor: LINE, lineWidth: 0.1, overflow: 'linebreak', valign: 'middle' },
+    headStyles: { fillColor: BRICK, textColor: WHITE, fontStyle: 'bold' },
+    footStyles: { fillColor: INK, textColor: WHITE, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: SAND },
+    showFoot: 'lastPage',
+    rowPageBreak: 'avoid'
+  };
+  const rightCols = cols => data => { if (cols.indexOf(data.column.index) >= 0) data.cell.styles.halign = 'right'; };
+  const heading = t => {
+    if (y > H - 45) { doc.addPage(); y = 18; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...INK); doc.text(t, M, y);
+    doc.setDrawColor(...BRICK); doc.setLineWidth(0.6); doc.line(M, y + 1.8, M + 12, y + 1.8);
+    y += 6;
+  };
+
+  const totalFunds = sum(d.allFunds), totalSpent = sum(d.allExpenses), balance = totalFunds - totalSpent;
+  const pFunds = sum(d.funds), pSpent = sum(d.expenses);
+
+  // ---- summary
+  heading('Summary');
+  const isAll = d.range.isAll;
+  doc.autoTable(Object.assign({}, common, {
+    startY: y,
+    head: [isAll ? ['', 'Project to date'] : ['', 'This period', 'Project to date']],
+    body: isAll
+      ? [['Funds added', money(totalFunds)], ['Spent', money(totalSpent)], ['Balance', money(balance)]]
+      : [['Funds added', money(pFunds), money(totalFunds)], ['Spent', money(pSpent), money(totalSpent)], ['Balance', money(pFunds - pSpent), money(balance)]],
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 55 } },
+    didParseCell: rightCols([1, 2])
+  }));
+  y = doc.lastAutoTable.finalY + 5;
+  if (!isAll) {
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5); doc.setTextColor(...SOFT);
+    doc.text('"This period" balance is the net movement in the period; "Project to date" is the current balance.', M, y);
+    y += 5;
+  }
+  const usedPct = totalFunds > 0 ? totalSpent / totalFunds : 0;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SOFT);
+  doc.text('Fund used to date: ' + Math.round(usedPct * 100) + '%', M, y);
+  y += 2.5;
+  doc.setFillColor(...SAND); doc.roundedRect(M, y, W - 2 * M, 3.2, 1.6, 1.6, 'F');
+  if (usedPct > 0) {
+    doc.setFillColor(...(usedPct > 0.85 ? TAPE : BRICK));
+    doc.roundedRect(M, y, Math.max((W - 2 * M) * Math.min(usedPct, 1), 3.2), 3.2, 1.6, 1.6, 'F');
+  }
+  y += 11;
+
+  // ---- spending by category
+  heading('Spending by category');
+  const catOrder = ['material', 'labour', 'transport', 'other'];
+  const catMap = {};
+  d.expenses.forEach(e => { const c = e.category || 'other'; (catMap[c] = catMap[c] || { n: 0, t: 0 }); catMap[c].n++; catMap[c].t += Number(e.amount) || 0; });
+  const cats = Object.keys(catMap).sort((a, b) => ((catOrder.indexOf(a) < 0 ? 99 : catOrder.indexOf(a)) - (catOrder.indexOf(b) < 0 ? 99 : catOrder.indexOf(b))) || a.localeCompare(b));
+  if (!cats.length) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SOFT);
+    doc.text('No expenses recorded for this period.', M, y + 2); y += 10;
+  } else {
+    doc.autoTable(Object.assign({}, common, {
+      startY: y,
+      head: [['Category', 'Entries', 'Amount (LKR)', 'Share']],
+      body: cats.map(c => [cap(c), String(catMap[c].n), fmtNum(catMap[c].t), pSpent ? Math.round(catMap[c].t / pSpent * 100) + '%' : '-']),
+      foot: [['Total', String(d.expenses.length), fmtNum(pSpent), '100%']],
+      didParseCell: rightCols([1, 2, 3])
+    }));
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  // ---- expense entries
+  if (d.expenses.length) {
+    heading('Expense entries');
+    const sorted = d.expenses.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || idNum(a) - idNum(b));
+    doc.autoTable(Object.assign({}, common, {
+      startY: y,
+      head: [['Date', 'Item', 'Category', 'Supplier', 'Amount (LKR)']],
+      body: sorted.map(e => [fmtDate(e.date), itemText(e, d.includeNotes), cap(e.category), pdfSafe(e.supplier || '-'), fmtNum(e.amount)]),
+      foot: [[{ content: 'Total (' + sorted.length + ' entries)', colSpan: 4, styles: { halign: 'right' } }, fmtNum(pSpent)]],
+      columnStyles: { 0: { cellWidth: 23 }, 2: { cellWidth: 22 }, 3: { cellWidth: 30 }, 4: { cellWidth: 28 } },
+      didParseCell: rightCols([4])
+    }));
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  // ---- fund history
+  if (d.includeFunds) {
+    heading('Fund history');
+    if (!d.funds.length) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SOFT);
+      doc.text('No fund entries in this period.', M, y + 2);
+    } else {
+      const fs = d.funds.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || idNum(a) - idNum(b));
+      doc.autoTable(Object.assign({}, common, {
+        startY: y,
+        head: [['Date', 'Source', 'Amount (LKR)']],
+        body: fs.map(f => [fmtDate(f.date), pdfSafe(f.source || 'Fund deposit'), fmtNum(f.amount)]),
+        foot: [[{ content: 'Total added', colSpan: 2, styles: { halign: 'right' } }, fmtNum(pFunds)]],
+        columnStyles: { 0: { cellWidth: 28 }, 2: { cellWidth: 40 } },
+        didParseCell: rightCols([2])
+      }));
+    }
+  }
+
+  // ---- footer on every page
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, H - 12, W - M, H - 12);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...SOFT);
+    doc.text('Site Ledger - House construction report', M, H - 7);
+    doc.text('Page ' + i + ' of ' + pages, W - M, H - 7, { align: 'right' });
+  }
+  return doc;
+}
+/*REPORT_END*/
+
+/* ---------- helpers ---------- */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmt(n) { return 'LKR ' + fmtNum(n); }
+function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+function newId() { return Date.now() * 1000 + Math.floor(Math.random() * 1000); }
+function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+function toNum(v) { return (v === '' || v == null) ? 0 : (Number(v) || 0); }
+function byNewest(a, b) { return (b.date || '').localeCompare(a.date || '') || (Number(b.id) - Number(a.id)) || 0; }
+
+function showToast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind || 'success');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+const ICON_EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>';
+const ICON_TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>';
+
+/* ---------- setup ---------- */
+function init() {
+  if (!API_URL) {
+    document.getElementById('config-section').style.display = 'block';
+    document.getElementById('main-app').style.display = 'none';
+  } else {
+    document.getElementById('config-section').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('current-url').textContent = API_URL;
+    document.querySelectorAll('input[type=number]').forEach(i => { i.step = 'any'; i.inputMode = 'decimal'; });
+    resetForm();
+    resetFundForm();
     toggleUnitMode();
+    updateReportPreview();
     refreshAll();
   }
 }
 
-function saveApiUrl(){
-  const val=document.getElementById('api-url-input').value.trim();
-  const alertBox=document.getElementById('config-alert');
-  if(!val.includes('script.google.com')){
-    alertBox.innerHTML='<div class="alert alert-danger">That doesn\'t look like a valid Google Apps Script URL.</div>';
+function saveUrlFrom(inputId, alertId, after) {
+  const val = document.getElementById(inputId).value.trim();
+  const box = document.getElementById(alertId);
+  if (!/^https:\/\/script\.google\.com\//.test(val)) {
+    box.innerHTML = '<div class="alert alert-danger">That doesn\'t look like a valid Google Apps Script URL.</div>';
     return;
   }
-  localStorage.setItem(STORAGE_KEY, val);
+  try { localStorage.setItem(STORAGE_KEY, val); } catch (e) {}
   API_URL = val;
-  init();
+  after(box);
+}
+function saveApiUrl() { saveUrlFrom('api-url-input', 'config-alert', () => init()); }
+function updateApiUrl() {
+  saveUrlFrom('api-url-input-2', 'settings-alert', box => {
+    document.getElementById('current-url').textContent = API_URL;
+    box.innerHTML = '<div class="alert alert-success">Updated. Refreshing...</div>';
+    setTimeout(refreshAll, 400);
+  });
 }
 
-function updateApiUrl(){
-  const val=document.getElementById('api-url-input-2').value.trim();
-  const alertBox=document.getElementById('settings-alert');
-  if(!val.includes('script.google.com')){
-    alertBox.innerHTML='<div class="alert alert-danger">That doesn\'t look like a valid Google Apps Script URL.</div>';
-    return;
-  }
-  localStorage.setItem(STORAGE_KEY, val);
-  API_URL = val;
-  document.getElementById('current-url').textContent=API_URL;
-  alertBox.innerHTML='<div class="alert alert-success">Updated. Refreshing...</div>';
-  setTimeout(refreshAll, 600);
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  document.getElementById('tabbtn-' + t).classList.add('active');
+  if (t === 'dashboard') renderDashboard();
+  if (t === 'expenses') renderExpenses();
+  if (t === 'funds') renderFunds();
+  if (t === 'report') updateReportPreview();
 }
 
-function showTab(t){
-  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
-  document.getElementById('tabbtn-'+t).classList.add('active');
-  if(t==='dashboard')renderDashboard();
-  if(t==='expenses')renderExpenses();
-  if(t==='funds')renderFunds();
+function setSyncState(state) {
+  document.getElementById('sync-dot').className = 'sync-dot' + (state === 'loading' ? ' loading' : state === 'error' ? ' error' : '');
+  document.getElementById('sync-text').textContent = state === 'loading' ? 'Syncing...' : state === 'error' ? 'Sync failed' : 'Synced';
 }
 
-function toggleUnitMode(){
-  const has = document.getElementById('f-has-unit').checked;
-  document.getElementById('unit-fields').style.display = has ? 'block' : 'none';
-  document.getElementById('direct-amount-row').style.display = has ? 'none' : 'block';
-}
-
-function calcTotal(){
-  const up = parseFloat(document.getElementById('f-unitprice').value) || 0;
-  const qty = parseFloat(document.getElementById('f-qty').value) || 0;
-  document.getElementById('calc-total').textContent = fmt(up * qty);
-}
-
-function setSyncState(state){
-  const dot=document.getElementById('sync-dot');
-  const text=document.getElementById('sync-text');
-  dot.className='sync-dot'+(state==='loading'?' loading':state==='error'?' error':'');
-  text.textContent = state==='loading' ? 'Syncing...' : state==='error' ? 'Sync failed' : 'Synced';
-}
-
-async function apiCall(params){
-  const url = API_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('Network error');
+async function apiCall(params) {
+  const res = await fetch(API_URL + '?' + new URLSearchParams(params).toString());
+  if (!res.ok) throw new Error('Network error');
   return res.json();
 }
 
-async function refreshAll(){
+async function refreshAll() {
   setSyncState('loading');
-  try{
-    const [expRes, fundRes] = await Promise.all([
-      apiCall({action:'getExpenses'}),
-      apiCall({action:'getFunds'})
-    ]);
-    if(expRes.error || fundRes.error){
-      showSetupError(expRes.error || fundRes.error);
-      setSyncState('error');
-      return;
-    }
-    expenses = (expRes.data||[]).map(r=>({
-      id:r.ID, date:r.Date, category:r.Category, desc:r.Description,
-      unit:r.Unit, unitPrice:r.UnitPrice, quantity:r.Quantity,
-      amount:Number(r.Amount)||0, supplier:r.Supplier, notes:r.Notes
-    })).filter(e=>e.id);
-    funds = (fundRes.data||[]).map(r=>({
-      id:r.ID, date:r.Date, amount:Number(r.Amount)||0, source:r.Source
-    })).filter(f=>f.id);
+  try {
+    const [expRes, fundRes] = await Promise.all([apiCall({ action: 'getExpenses' }), apiCall({ action: 'getFunds' })]);
+    if (expRes.error || fundRes.error) { showSetupError(expRes.error || fundRes.error); setSyncState('error'); return; }
+
+    const ver = Math.min(expRes.version || 0, fundRes.version || 0);
+    document.getElementById('script-banner').innerHTML = ver < MIN_SCRIPT_VERSION
+      ? '<div class="alert alert-warn"><strong>Google Apps Script update needed.</strong>&nbsp;Dates can still shift until you paste the new script (AppsScript.gs) and redeploy: Deploy &rarr; Manage deployments &rarr; Edit &rarr; New version.</div>'
+      : '';
+
+    expenses = (expRes.data || []).map(r => ({
+      id: String(r.ID), date: normDate(r.Date),
+      category: String(r.Category || 'other').toLowerCase(), desc: r.Description || '',
+      unit: r.Unit || '', unitPrice: toNum(r.UnitPrice), quantity: toNum(r.Quantity),
+      amount: toNum(r.Amount), supplier: r.Supplier || '', notes: r.Notes || ''
+    })).filter(e => e.id && e.id !== 'undefined');
+
+    funds = (fundRes.data || []).map(r => ({
+      id: String(r.ID), date: normDate(r.Date), amount: toNum(r.Amount), source: r.Source || ''
+    })).filter(f => f.id && f.id !== 'undefined');
+
     setSyncState('idle');
     renderDashboard();
-    if(document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
-    if(document.getElementById('tab-funds').classList.contains('active')) renderFunds();
-  }catch(err){
+    if (document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
+    if (document.getElementById('tab-funds').classList.contains('active')) renderFunds();
+    updateReportPreview();
+  } catch (err) {
     showSetupError(err.message);
     setSyncState('error');
   }
 }
 
-function showSetupError(msg){
+function showSetupError(msg) {
+  document.getElementById('dash-loading').style.display = 'block';
   document.getElementById('dash-loading').innerHTML =
-    '<div class="alert alert-danger">Could not load the ledger. Check sheet tab names ("Expenses","Funds"), headers, and that deployment access is "Anyone". ('+(msg||'unknown error')+')</div>';
+    '<div class="alert alert-danger">Could not load the ledger. Check the sheet tab names ("Expenses", "Funds"), the headers, and that the deployment access is "Anyone". (' + esc(msg || 'unknown error') + ')</div>';
 }
 
-function resetForm(){
+/* ---------- expense form ---------- */
+function toggleUnitMode() {
+  const has = document.getElementById('f-has-unit').checked;
+  document.getElementById('unit-fields').style.display = has ? 'block' : 'none';
+  document.getElementById('direct-amount-row').style.display = has ? 'none' : 'block';
+}
+function calcTotal() {
+  const up = parseFloat(document.getElementById('f-unitprice').value) || 0;
+  const qty = parseFloat(document.getElementById('f-qty').value) || 0;
+  document.getElementById('calc-total').textContent = fmt(Math.round(up * qty * 100) / 100);
+}
+
+function resetForm() {
   editingId = null;
-  document.getElementById('f-id').value='';
-  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
-  document.getElementById('f-cat').value='material';
-  document.getElementById('f-desc').value='';
-  document.getElementById('f-unit').value='';
-  document.getElementById('f-unitprice').value='';
-  document.getElementById('f-qty').value='';
-  document.getElementById('f-amount-direct').value='';
-  document.getElementById('f-supplier').value='';
-  document.getElementById('f-notes').value='';
-  document.getElementById('f-has-unit').checked=true;
-  toggleUnitMode();
-  calcTotal();
-  document.getElementById('form-mode-label').textContent='Adding';
-  document.getElementById('add-btn-text').textContent='Save entry';
-  document.getElementById('cancel-edit-btn').style.display='none';
-  document.getElementById('add-alert').innerHTML='';
+  document.getElementById('f-date').value = todayLocal();
+  document.getElementById('f-cat').value = 'material';
+  ['f-desc', 'f-unit', 'f-unitprice', 'f-qty', 'f-amount-direct', 'f-supplier', 'f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-has-unit').checked = true;
+  toggleUnitMode(); calcTotal();
+  document.getElementById('form-mode-label').textContent = 'Adding';
+  document.getElementById('form-title').textContent = 'New expense entry';
+  document.getElementById('add-btn-text').textContent = 'Save entry';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
+  document.getElementById('entry-card').classList.remove('editing');
+  document.getElementById('add-alert').innerHTML = '';
 }
 
-function editExpense(id){
-  const e = expenses.find(x=>String(x.id)===String(id));
-  if(!e) return;
-  editingId = id;
-  document.getElementById('f-id').value=e.id;
-  document.getElementById('f-date').value=e.date ? new Date(e.date).toISOString().slice(0,10) : '';
-  document.getElementById('f-cat').value=e.category||'material';
-  document.getElementById('f-desc').value=e.desc||'';
-  const hasUnit = e.unit || e.unitPrice || e.quantity;
-  document.getElementById('f-has-unit').checked = !!hasUnit;
-  document.getElementById('f-unit').value=e.unit||'';
-  document.getElementById('f-unitprice').value=e.unitPrice||'';
-  document.getElementById('f-qty').value=e.quantity||'';
-  document.getElementById('f-amount-direct').value=hasUnit ? '' : e.amount;
-  document.getElementById('f-supplier').value=e.supplier||'';
-  document.getElementById('f-notes').value=e.notes||'';
-  toggleUnitMode();
-  calcTotal();
-  document.getElementById('form-mode-label').textContent='Editing';
-  document.getElementById('add-btn-text').textContent='Update entry';
-  document.getElementById('cancel-edit-btn').style.display='inline-flex';
+function editExpense(id) {
+  const e = expenses.find(x => String(x.id) === String(id));
+  if (!e) return;
+  resetForm();
+  editingId = e.id;
+  document.getElementById('f-date').value = normDate(e.date);
+  document.getElementById('f-cat').value = e.category || 'other';
+  document.getElementById('f-desc').value = e.desc;
+  const hasUnit = !!(e.unit || e.unitPrice || e.quantity);
+  document.getElementById('f-has-unit').checked = hasUnit;
+  document.getElementById('f-unit').value = e.unit;
+  document.getElementById('f-unitprice').value = e.unitPrice || '';
+  document.getElementById('f-qty').value = e.quantity || '';
+  document.getElementById('f-amount-direct').value = hasUnit ? '' : e.amount;
+  document.getElementById('f-supplier').value = e.supplier;
+  document.getElementById('f-notes').value = e.notes;
+  toggleUnitMode(); calcTotal();
+  document.getElementById('form-mode-label').textContent = 'Editing';
+  document.getElementById('form-title').textContent = 'Edit expense entry';
+  document.getElementById('add-btn-text').textContent = 'Update entry';
+  document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
+  document.getElementById('entry-card').classList.add('editing');
   showTab('add');
-  document.getElementById('tabbtn-add').click ? null : null;
-  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
-  document.getElementById('tabbtn-add').classList.add('active');
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function saveExpense(){
-  const date=document.getElementById('f-date').value;
-  const category=document.getElementById('f-cat').value;
-  const desc=document.getElementById('f-desc').value.trim();
-  const hasUnit=document.getElementById('f-has-unit').checked;
-  const unit=document.getElementById('f-unit').value.trim();
-  const unitPrice=parseFloat(document.getElementById('f-unitprice').value)||0;
-  const qty=parseFloat(document.getElementById('f-qty').value)||0;
-  const directAmount=parseFloat(document.getElementById('f-amount-direct').value)||0;
-  const supplier=document.getElementById('f-supplier').value.trim();
-  const notes=document.getElementById('f-notes').value.trim();
-  const alertBox=document.getElementById('add-alert');
+function cancelEdit() { resetForm(); showTab('expenses'); }
 
-  let amount = hasUnit ? (unitPrice*qty) : directAmount;
+async function saveExpense() {
+  const date = document.getElementById('f-date').value;
+  const category = document.getElementById('f-cat').value;
+  const desc = document.getElementById('f-desc').value.trim();
+  const hasUnit = document.getElementById('f-has-unit').checked;
+  const unit = document.getElementById('f-unit').value.trim();
+  const unitPrice = parseFloat(document.getElementById('f-unitprice').value) || 0;
+  const qty = parseFloat(document.getElementById('f-qty').value) || 0;
+  const directAmount = parseFloat(document.getElementById('f-amount-direct').value) || 0;
+  const supplier = document.getElementById('f-supplier').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+  const box = document.getElementById('add-alert');
 
-  if(!date||!desc||!amount||amount<=0){
-    alertBox.innerHTML='<div class="alert alert-danger">Please fill in date, description, and a valid amount.</div>';
+  const amount = hasUnit ? Math.round(unitPrice * qty * 100) / 100 : directAmount;
+  if (!date || !desc || !(amount > 0)) {
+    box.innerHTML = '<div class="alert alert-danger">Please fill in date, description, and a valid amount.</div>';
     return;
   }
-  const btn=document.getElementById('add-btn');
-  btn.disabled=true;
+  const btn = document.getElementById('add-btn');
+  btn.disabled = true;
+  const wasEditing = !!editingId;
   const payload = {
-    date, category, description:desc,
-    unit: hasUnit ? unit : '',
-    unitPrice: hasUnit ? unitPrice : '',
-    quantity: hasUnit ? qty : '',
+    action: wasEditing ? 'updateExpense' : 'addExpense',
+    id: wasEditing ? editingId : newId(),
+    date, category, description: desc,
+    unit: hasUnit ? unit : '', unitPrice: hasUnit ? unitPrice : '', quantity: hasUnit ? qty : '',
     amount, supplier, notes
   };
-  const action = editingId ? 'updateExpense' : 'addExpense';
-  if(editingId) payload.id = editingId; else payload.id = Date.now();
-
-  apiCall(Object.assign({action}, payload))
-    .then(res=>{
-      btn.disabled=false;
-      if(res.error){ alertBox.innerHTML='<div class="alert alert-danger">'+res.error+'</div>'; return; }
-      alertBox.innerHTML='<div class="alert alert-success">'+(editingId?'Entry updated.':'Saved '+fmt(amount)+' to the ledger.')+'</div>';
-      const wasEditing = editingId;
-      resetForm();
-      if(!wasEditing) setTimeout(()=>{document.getElementById('add-alert').innerHTML='';},2500);
-      refreshAll();
-    })
-    .catch(err=>{
-      btn.disabled=false;
-      alertBox.innerHTML='<div class="alert alert-danger">Failed to save: '+err.message+'</div>';
-    });
+  try {
+    const res = await apiCall(payload);
+    if (res.error || res.success === false) {
+      box.innerHTML = '<div class="alert alert-danger">' + esc(res.error === 'ID not found' ? 'This entry no longer exists (it may have been deleted on another device). Tap Refresh and try again.' : (res.error || 'Could not save.')) + '</div>';
+      return;
+    }
+    resetForm();
+    showToast(wasEditing ? 'Entry updated' : 'Saved ' + fmt(amount));
+    await refreshAll();
+    if (wasEditing) showTab('expenses');
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-danger">Failed to save: ' + esc(err.message) + '</div>';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
-function requestDeleteExpense(id){
-  pendingDelete = {type:'expense', id};
-  document.getElementById('delete-modal-text').textContent = 'This will permanently remove this expense entry from the shared ledger. This cannot be undone.';
+/* ---------- fund form ---------- */
+function resetFundForm() {
+  editingFundId = null;
+  document.getElementById('fund-date').value = todayLocal();
+  document.getElementById('fund-amount').value = '';
+  document.getElementById('fund-source').value = '';
+  document.getElementById('fund-form-title').textContent = 'Add funds';
+  document.getElementById('fund-form-mode').textContent = 'Top up';
+  document.getElementById('fund-btn').textContent = 'Add funds';
+  document.getElementById('fund-cancel-btn').style.display = 'none';
+  document.getElementById('fund-card').classList.remove('editing');
+  document.getElementById('fund-alert').innerHTML = '';
+}
+
+function editFund(id) {
+  const f = funds.find(x => String(x.id) === String(id));
+  if (!f) return;
+  resetFundForm();
+  editingFundId = f.id;
+  document.getElementById('fund-date').value = normDate(f.date);
+  document.getElementById('fund-amount').value = f.amount;
+  document.getElementById('fund-source').value = f.source;
+  document.getElementById('fund-form-title').textContent = 'Edit fund entry';
+  document.getElementById('fund-form-mode').textContent = 'Editing';
+  document.getElementById('fund-btn').textContent = 'Update fund entry';
+  document.getElementById('fund-cancel-btn').style.display = 'inline-flex';
+  document.getElementById('fund-card').classList.add('editing');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function saveFund() {
+  const date = document.getElementById('fund-date').value;
+  const amount = parseFloat(document.getElementById('fund-amount').value);
+  const source = document.getElementById('fund-source').value.trim();
+  const box = document.getElementById('fund-alert');
+  if (!date || !(amount > 0)) {
+    box.innerHTML = '<div class="alert alert-danger">Please enter a date and an amount greater than zero.</div>';
+    return;
+  }
+  const btn = document.getElementById('fund-btn');
+  btn.disabled = true;
+  const wasEditing = !!editingFundId;
+  try {
+    const res = await apiCall({ action: wasEditing ? 'updateFund' : 'addFund', id: wasEditing ? editingFundId : newId(), date, amount, source });
+    if (res.error || res.success === false) {
+      box.innerHTML = '<div class="alert alert-danger">' + esc(res.error === 'ID not found' ? 'This fund entry no longer exists. Tap Refresh and try again.' : (res.error || 'Could not save.')) + '</div>';
+      return;
+    }
+    resetFundForm();
+    showToast(wasEditing ? 'Fund entry updated' : fmt(amount) + ' added to the fund');
+    await refreshAll();
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-danger">Failed: ' + esc(err.message) + '</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------- delete ---------- */
+function requestDeleteExpense(id) {
+  const e = expenses.find(x => String(x.id) === String(id));
+  pendingDelete = { type: 'expense', id };
+  document.getElementById('delete-modal-title').textContent = 'Delete this expense?';
+  document.getElementById('delete-modal-text').textContent = (e ? '"' + e.desc + '" (' + fmt(e.amount) + ') ' : 'This entry ') + 'will be permanently removed from the shared ledger for everyone. This cannot be undone.';
   document.getElementById('delete-modal').classList.add('open');
 }
-function requestDeleteFund(id){
-  pendingDelete = {type:'fund', id};
-  document.getElementById('delete-modal-text').textContent = 'This will permanently remove this fund entry from the shared ledger. This cannot be undone.';
+function requestDeleteFund(id) {
+  const f = funds.find(x => String(x.id) === String(id));
+  pendingDelete = { type: 'fund', id };
+  document.getElementById('delete-modal-title').textContent = 'Delete this fund entry?';
+  document.getElementById('delete-modal-text').textContent = (f ? '"' + (f.source || 'Fund deposit') + '" (' + fmt(f.amount) + ') ' : 'This entry ') + 'will be permanently removed from the shared ledger for everyone. This cannot be undone.';
   document.getElementById('delete-modal').classList.add('open');
 }
-function closeDeleteModal(){
-  pendingDelete = null;
-  document.getElementById('delete-modal').classList.remove('open');
-}
-function confirmDelete(){
-  if(!pendingDelete) return;
-  const action = pendingDelete.type==='expense' ? 'deleteExpense' : 'deleteFund';
-  apiCall({action, id:pendingDelete.id}).then(res=>{
+function closeDeleteModal() { pendingDelete = null; document.getElementById('delete-modal').classList.remove('open'); }
+async function confirmDelete() {
+  if (!pendingDelete) return;
+  const job = pendingDelete;
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true;
+  try {
+    const res = await apiCall({ action: job.type === 'expense' ? 'deleteExpense' : 'deleteFund', id: job.id });
     closeDeleteModal();
+    if (res.error || res.success === false) { showToast(res.error === 'ID not found' ? 'Already deleted' : (res.error || 'Delete failed'), 'error'); }
+    else {
+      showToast('Entry deleted');
+      if (job.type === 'expense' && editingId === job.id) resetForm();
+      if (job.type === 'fund' && editingFundId === job.id) resetFundForm();
+    }
     refreshAll();
-  }).catch(()=>{ closeDeleteModal(); });
+  } catch (err) {
+    closeDeleteModal(); showToast('Delete failed: ' + err.message, 'error');
+  } finally { btn.disabled = false; }
 }
 
-function addFund(){
-  const date=document.getElementById('fund-date').value;
-  const amount=parseFloat(document.getElementById('fund-amount').value);
-  const source=document.getElementById('fund-source').value.trim();
-  const alertBox=document.getElementById('fund-alert');
-  if(!date||!amount||amount<=0){
-    alertBox.innerHTML='<div class="alert alert-danger">Please enter a date and amount.</div>';
+/* ---------- rendering ---------- */
+function catBadge(c) {
+  const map = { material: 'badge-material', labour: 'badge-labour', transport: 'badge-transport', other: 'badge-other' };
+  return '<span class="badge ' + (map[c] || 'badge-other') + '">' + esc(c || 'other') + '</span>';
+}
+
+function renderDashboard() {
+  document.getElementById('dash-loading').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+  const totalFunds = funds.reduce((s, f) => s + f.amount, 0);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const balance = totalFunds - totalSpent;
+  const pctUsed = pct(totalSpent, totalFunds);
+
+  document.getElementById('board-fund').textContent = fmt(totalFunds);
+  document.getElementById('board-spent').textContent = fmt(totalSpent);
+  document.getElementById('board-balance').textContent = fmt(balance);
+  document.getElementById('meter-pct').textContent = pctUsed + '% of fund used';
+  document.getElementById('meter-count').textContent = plural(expenses.length, 'entry', 'entries');
+
+  const segCount = 20, filled = Math.round(Math.min(pctUsed, 100) / 100 * segCount);
+  let seg = '';
+  for (let i = 0; i < segCount; i++) seg += '<div class="brick-seg' + (i < filled ? ' filled' : '') + '"></div>';
+  document.getElementById('brick-meter').innerHTML = seg;
+
+  const cats = { material: 0, labour: 0, transport: 0, other: 0 };
+  expenses.forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
+  const colors = { material: 'var(--brick)', labour: 'var(--cure)', transport: 'var(--sand)', other: 'var(--steel)' };
+  let catHtml = '';
+  Object.entries(cats).forEach(([c, v]) => {
+    if (!v) return;
+    catHtml += '<div class="breakdown-row"><div class="breakdown-head">' + catBadge(c) + '<span class="breakdown-amount">' + fmt(v) + '</span></div><div class="bar-wrap"><div class="bar-fill" style="width:' + pct(v, totalSpent) + '%;background:' + (colors[c] || 'var(--steel)') + '"></div></div></div>';
+  });
+  document.getElementById('cat-breakdown').innerHTML = catHtml || '<div class="empty">No expenses logged yet</div>';
+
+  const recent = expenses.slice().sort(byNewest).slice(0, 6);
+  document.getElementById('recent-list').innerHTML = recent.length
+    ? recent.map(e => '<div class="breakdown-row"><div class="breakdown-head"><span style="font-weight:500">' + esc(e.desc) + '</span><span class="breakdown-amount">' + fmt(e.amount) + '</span></div><div style="font-size:11.5px;color:var(--ink-faint);font-family:var(--font-mono)">' + fmtDate(e.date) + '</div></div>').join('')
+    : '<div class="empty">No expenses logged yet</div>';
+}
+
+function renderExpenses() {
+  const catF = document.getElementById('fil-cat').value;
+  const list = expenses.filter(e => !catF || e.category === catF).sort(byNewest);
+  const total = list.reduce((s, e) => s + e.amount, 0);
+  if (!list.length) {
+    document.getElementById('expenses-table').innerHTML = '<div class="empty">No expenses match this filter.</div>';
+    document.getElementById('expenses-total').textContent = '';
     return;
   }
-  apiCall({action:'addFund', id:Date.now(), date, amount, source})
-    .then(res=>{
-      if(res.error){ alertBox.innerHTML='<div class="alert alert-danger">'+res.error+'</div>'; return; }
-      ['fund-date','fund-amount','fund-source'].forEach(id=>document.getElementById(id).value='');
-      document.getElementById('fund-date').value=new Date().toISOString().slice(0,10);
-      alertBox.innerHTML='<div class="alert alert-success">'+fmt(amount)+' added.</div>';
-      setTimeout(()=>alertBox.innerHTML='',2500);
-      refreshAll();
-    })
-    .catch(err=>{ alertBox.innerHTML='<div class="alert alert-danger">Failed: '+err.message+'</div>'; });
+  let html = '<table class="ledger-table"><thead><tr><th>Date</th><th>Item</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>';
+  list.forEach(e => {
+    const qtyNote = (e.unit || e.quantity || e.unitPrice)
+      ? '<div class="qty-note">' + esc((e.quantity ? fmtNum(e.quantity) : '') + ' ' + (e.unit || '')).trim() + (e.unitPrice ? ' @ ' + fmt(e.unitPrice) : '') + '</div>' : '';
+    html += '<tr>' +
+      '<td class="date-cell">' + fmtDate(e.date) + '</td>' +
+      '<td><div>' + esc(e.desc) + '</div>' + qtyNote + (e.supplier ? '<div class="qty-note">' + esc(e.supplier) + '</div>' : '') + '</td>' +
+      '<td>' + catBadge(e.category) + '</td>' +
+      '<td class="amount-cell">' + fmt(e.amount) + '</td>' +
+      '<td><div class="row-actions">' +
+        '<button class="btn btn-sm btn-icon" onclick="editExpense(\'' + esc(e.id) + '\')" aria-label="Edit">' + ICON_EDIT + '</button>' +
+        '<button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteExpense(\'' + esc(e.id) + '\')" aria-label="Delete">' + ICON_TRASH + '</button>' +
+      '</div></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('expenses-table').innerHTML = html;
+  document.getElementById('expenses-total').textContent = list.length + ' entries — Total ' + fmt(total);
 }
 
-function catBadge(c){const map={material:'badge-material',labour:'badge-labour',transport:'badge-transport',other:'badge-other'};return'<span class="badge '+(map[c]||'badge-other')+'">'+(c||'other')+'</span>';}
-
-function renderDashboard(){
-  document.getElementById('dash-loading').style.display='none';
-  document.getElementById('dash-content').style.display='block';
-  const totalFunds=funds.reduce((s,f)=>s+f.amount,0);
-  const totalSpent=expenses.reduce((s,e)=>s+e.amount,0);
-  const balance=totalFunds-totalSpent;
-  const pctUsed=pct(totalSpent,totalFunds);
-
-  document.getElementById('board-fund').textContent=fmt(totalFunds);
-  document.getElementById('board-spent').textContent=fmt(totalSpent);
-  document.getElementById('board-balance').textContent=fmt(balance);
-  document.getElementById('meter-pct').textContent=pctUsed+'% of fund used';
-  document.getElementById('meter-count').textContent=expenses.length+' entries';
-
-  const segCount=20;
-  const filledSegs=Math.round((Math.min(pctUsed,100)/100)*segCount);
-  let segHtml='';
-  for(let i=0;i<segCount;i++){
-    segHtml+='<div class="brick-seg'+(i<filledSegs?' filled':'')+'"></div>';
-  }
-  document.getElementById('brick-meter').innerHTML=segHtml;
-
-  const cats={material:0,labour:0,transport:0,other:0};
-  expenses.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.amount;});
-  const catColors={material:'var(--brick)',labour:'var(--cure)',transport:'var(--sand)',other:'var(--steel)'};
-
-  let catHtml='';
-  Object.entries(cats).forEach(([c,v])=>{
-    if(!v)return;
-    const p=pct(v,totalSpent);
-    catHtml+='<div class="breakdown-row"><div class="breakdown-head">'+catBadge(c)+'<span class="breakdown-amount">'+fmt(v)+'</span></div><div class="bar-wrap"><div class="bar-fill" style="width:'+p+'%;background:'+catColors[c]+'"></div></div></div>';
-  });
-  document.getElementById('cat-breakdown').innerHTML=catHtml||'<div class="empty">No expenses logged yet</div>';
-
-  const recent=[...expenses].sort((a,b)=>String(b.id).localeCompare(String(a.id))).slice(0,6);
-  if(!recent.length){document.getElementById('recent-list').innerHTML='<div class="empty">No expenses logged yet</div>';return;}
-  let rHtml='';
-  recent.forEach(e=>{
-    rHtml+='<div class="breakdown-row"><div class="breakdown-head"><span style="font-weight:500">'+e.desc+'</span><span class="breakdown-amount">'+fmt(e.amount)+'</span></div><div style="font-size:11.5px;color:var(--ink-faint);font-family:var(--font-mono)">'+e.date+'</div></div>';
-  });
-  document.getElementById('recent-list').innerHTML=rHtml;
+function renderFunds() {
+  const totalFunds = funds.reduce((s, f) => s + f.amount, 0);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('f-total-added').textContent = fmt(totalFunds);
+  document.getElementById('f-total-spent').textContent = fmt(totalSpent);
+  document.getElementById('f-balance').textContent = fmt(totalFunds - totalSpent);
+  const sorted = funds.slice().sort(byNewest);
+  if (!sorted.length) { document.getElementById('fund-history').innerHTML = '<div class="empty">No fund entries yet</div>'; return; }
+  document.getElementById('fund-history').innerHTML = sorted.map(f =>
+    '<div class="fund-row"><div><div class="fund-source">' + esc(f.source || 'Fund deposit') + '</div><div class="fund-date">' + fmtDate(f.date) + '</div></div>' +
+    '<div style="display:flex;align-items:center;gap:8px"><div class="fund-amount">+' + fmt(f.amount) + '</div>' +
+    '<button class="btn btn-sm btn-icon" onclick="editFund(\'' + esc(f.id) + '\')" aria-label="Edit fund entry">' + ICON_EDIT + '</button>' +
+    '<button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteFund(\'' + esc(f.id) + '\')" aria-label="Delete fund entry">' + ICON_TRASH + '</button></div></div>'
+  ).join('');
 }
 
-function renderExpenses(){
-  const catF=document.getElementById('fil-cat').value;
-  let filtered=[...expenses].filter(e=>(!catF||e.category===catF)).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
-  const total=filtered.reduce((s,e)=>s+e.amount,0);
-  if(!filtered.length){
-    document.getElementById('expenses-table').innerHTML='<div class="empty">No expenses match this filter.</div>';
-    document.getElementById('expenses-total').textContent='';
+/* ---------- report (PDF + print view) ---------- */
+function getReportRange() {
+  const kind = document.getElementById('rep-period').value;
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+  let from = '', to = '', label = 'All entries', error = '';
+  if (kind === 'this-month') { from = isoLocal(new Date(y, m, 1)); to = isoLocal(new Date(y, m + 1, 0)); }
+  else if (kind === 'last-month') { from = isoLocal(new Date(y, m - 1, 1)); to = isoLocal(new Date(y, m, 0)); }
+  else if (kind === 'custom') { from = document.getElementById('rep-from').value; to = document.getElementById('rep-to').value; }
+  if (from && to && from > to) error = 'The "From" date is after the "To" date.';
+  if (from && to) label = fmtDate(from) + ' - ' + fmtDate(to);
+  else if (from) label = 'From ' + fmtDate(from);
+  else if (to) label = 'Up to ' + fmtDate(to);
+  return { from, to, label, isAll: !from && !to, error };
+}
+const inRange = (date, r) => (!r.from || date >= r.from) && (!r.to || date <= r.to);
+
+function reportData() {
+  const r = getReportRange();
+  return {
+    range: r,
+    expenses: expenses.filter(e => inRange(e.date, r)),
+    funds: funds.filter(f => inRange(f.date, r)),
+    allExpenses: expenses, allFunds: funds,
+    includeFunds: document.getElementById('rep-funds').checked,
+    includeNotes: document.getElementById('rep-notes').checked,
+    generated: todayLocal()
+  };
+}
+
+function onPeriodChange() {
+  document.getElementById('rep-custom').style.display = document.getElementById('rep-period').value === 'custom' ? 'grid' : 'none';
+  updateReportPreview();
+}
+
+function updateReportPreview() {
+  const el = document.getElementById('rep-preview');
+  if (!el) return;
+  const d = reportData();
+  if (d.range.error) { el.innerHTML = '<span style="color:var(--tape)">' + esc(d.range.error) + '</span>'; return; }
+  const spent = d.expenses.reduce((s, e) => s + e.amount, 0);
+  const added = d.funds.reduce((s, f) => s + f.amount, 0);
+  const odd = d.expenses.some(e => hasUnsupported(e.desc + e.supplier + e.notes + e.unit)) || d.funds.some(f => hasUnsupported(f.source));
+  el.innerHTML = '<span>' + esc(d.range.label) + '</span><span class="total">' + plural(d.expenses.length, 'expense', 'expenses') + ' · ' + fmt(spent) + (d.includeFunds ? ' · ' + plural(d.funds.length, 'fund entry', 'fund entries') + ' · ' + fmt(added) : '') + '</span>';
+  document.getElementById('rep-unicode-warn').style.display = odd ? 'block' : 'none';
+}
+
+function downloadReport() {
+  const box = document.getElementById('report-alert');
+  box.innerHTML = '';
+  const d = reportData();
+  if (d.range.error) { box.innerHTML = '<div class="alert alert-danger">' + esc(d.range.error) + '</div>'; return; }
+  if (!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable)) {
+    box.innerHTML = '<div class="alert alert-danger">The PDF tool could not load. Check your internet connection and reload the page, or use the print view below.</div>';
     return;
   }
-  let html='<table class="ledger-table"><thead><tr><th>Date</th><th>Item</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>';
-  filtered.forEach(e=>{
-    const qtyNote = (e.unit||e.quantity||e.unitPrice) ? '<div class="qty-note">'+(e.quantity||'')+' '+(e.unit||'')+(e.unitPrice?' @ '+fmt(e.unitPrice):'')+'</div>' : '';
-    html+='<tr>'+
-      '<td class="date-cell">'+e.date+'</td>'+
-      '<td><div>'+e.desc+'</div>'+qtyNote+(e.supplier?'<div class="qty-note">'+e.supplier+'</div>':'')+'</td>'+
-      '<td>'+catBadge(e.category)+'</td>'+
-      '<td class="amount-cell">'+fmt(e.amount)+'</td>'+
-      '<td><div class="row-actions">'+
-        '<button class="btn btn-sm btn-icon" onclick="editExpense(\''+e.id+'\')" aria-label="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>'+
-        '<button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteExpense(\''+e.id+'\')" aria-label="Delete"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button>'+
-      '</div></td>'+
-    '</tr>';
-  });
-  html+='</tbody></table>';
-  document.getElementById('expenses-table').innerHTML=html;
-  document.getElementById('expenses-total').textContent=filtered.length+' entries — Total '+fmt(total);
+  try {
+    const doc = buildReportPdf(window.jspdf.jsPDF, d);
+    doc.save('Site-Ledger-Report-' + todayLocal() + '.pdf');
+    showToast('PDF downloaded');
+  } catch (err) {
+    box.innerHTML = '<div class="alert alert-danger">Could not create the PDF: ' + esc(err.message) + '</div>';
+  }
 }
 
-function renderFunds(){
-  const totalFunds=funds.reduce((s,f)=>s+f.amount,0);
-  const totalSpent=expenses.reduce((s,e)=>s+e.amount,0);
-  document.getElementById('f-total-added').textContent=fmt(totalFunds);
-  document.getElementById('f-total-spent').textContent=fmt(totalSpent);
-  document.getElementById('f-balance').textContent=fmt(totalFunds-totalSpent);
-  const sorted=[...funds].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  if(!sorted.length){document.getElementById('fund-history').innerHTML='<div class="empty">No fund entries yet</div>';return;}
-  let html='';
-  sorted.forEach(f=>{
-    html+='<div class="fund-row"><div><div class="fund-source">'+(f.source||'Fund deposit')+'</div><div class="fund-date">'+f.date+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="fund-amount">+'+fmt(f.amount)+'</div><button class="btn btn-sm btn-icon btn-danger-ghost" onclick="requestDeleteFund(\''+f.id+'\')" aria-label="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button></div></div>';
-  });
-  document.getElementById('fund-history').innerHTML=html;
+// Print view: the browser's own text engine, so Sinhala / Tamil text prints correctly.
+function buildPrintHtml(d) {
+  const sum = a => a.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const tf = sum(d.allFunds), ts = sum(d.allExpenses), pf = sum(d.funds), ps = sum(d.expenses);
+  const sortAsc = (a, b) => (a.date || '').localeCompare(b.date || '') || (Number(a.id) - Number(b.id)) || 0;
+  const rows = d.expenses.slice().sort(sortAsc).map(e => {
+    let item = esc(e.desc);
+    if (e.unit || e.quantity || e.unitPrice) item += '<div class="pr-small">' + esc(((e.quantity ? fmtNum(e.quantity) : '') + ' ' + (e.unit || '')).trim()) + (e.unitPrice ? ' @ LKR ' + fmtNum(e.unitPrice) : '') + '</div>';
+    if (d.includeNotes && e.notes) item += '<div class="pr-small">Note: ' + esc(e.notes) + '</div>';
+    return '<tr><td>' + fmtDate(e.date) + '</td><td>' + item + '</td><td>' + esc(e.category) + '</td><td>' + esc(e.supplier || '-') + '</td><td class="r">' + fmtNum(e.amount) + '</td></tr>';
+  }).join('');
+  const frows = d.funds.slice().sort(sortAsc).map(f => '<tr><td>' + fmtDate(f.date) + '</td><td>' + esc(f.source || 'Fund deposit') + '</td><td class="r">' + fmtNum(f.amount) + '</td></tr>').join('');
+  const cats = {};
+  d.expenses.forEach(e => { cats[e.category] = cats[e.category] || { n: 0, t: 0 }; cats[e.category].n++; cats[e.category].t += e.amount; });
+  const crows = Object.keys(cats).map(c => '<tr><td>' + esc(c) + '</td><td class="r">' + cats[c].n + '</td><td class="r">' + fmtNum(cats[c].t) + '</td><td class="r">' + (ps ? Math.round(cats[c].t / ps * 100) + '%' : '-') + '</td></tr>').join('');
+  return '<div class="pr-head"><div><div class="pr-title">Site Ledger</div><div>House construction expense report</div></div>' +
+    '<div class="pr-meta">Generated ' + fmtDate(d.generated) + '<br>' + esc(d.range.label) + '</div></div>' +
+    '<h3>Summary</h3><table class="pr-t"><thead><tr><th></th>' + (d.range.isAll ? '' : '<th class="r">This period</th>') + '<th class="r">Project to date</th></tr></thead><tbody>' +
+    '<tr><td>Funds added</td>' + (d.range.isAll ? '' : '<td class="r">LKR ' + fmtNum(pf) + '</td>') + '<td class="r">LKR ' + fmtNum(tf) + '</td></tr>' +
+    '<tr><td>Spent</td>' + (d.range.isAll ? '' : '<td class="r">LKR ' + fmtNum(ps) + '</td>') + '<td class="r">LKR ' + fmtNum(ts) + '</td></tr>' +
+    '<tr><td><b>Balance</b></td>' + (d.range.isAll ? '' : '<td class="r"><b>LKR ' + fmtNum(pf - ps) + '</b></td>') + '<td class="r"><b>LKR ' + fmtNum(tf - ts) + '</b></td></tr></tbody></table>' +
+    '<h3>Spending by category</h3>' + (crows ? '<table class="pr-t"><thead><tr><th>Category</th><th class="r">Entries</th><th class="r">Amount (LKR)</th><th class="r">Share</th></tr></thead><tbody>' + crows + '</tbody></table>' : '<p>No expenses recorded for this period.</p>') +
+    (rows ? '<h3>Expense entries</h3><table class="pr-t"><thead><tr><th>Date</th><th>Item</th><th>Category</th><th>Supplier</th><th class="r">Amount (LKR)</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="4" class="r"><b>Total (' + d.expenses.length + ' entries)</b></td><td class="r"><b>' + fmtNum(ps) + '</b></td></tr></tfoot></table>' : '') +
+    (d.includeFunds ? '<h3>Fund history</h3>' + (frows ? '<table class="pr-t"><thead><tr><th>Date</th><th>Source</th><th class="r">Amount (LKR)</th></tr></thead><tbody>' + frows + '</tbody><tfoot><tr><td colspan="2" class="r"><b>Total added</b></td><td class="r"><b>' + fmtNum(pf) + '</b></td></tr></tfoot></table>' : '<p>No fund entries in this period.</p>') : '');
 }
 
-document.getElementById('delete-modal').addEventListener('click', function(e){
-  if(e.target === this) closeDeleteModal();
-});
+function printReport() {
+  const d = reportData();
+  if (d.range.error) { document.getElementById('report-alert').innerHTML = '<div class="alert alert-danger">' + esc(d.range.error) + '</div>'; return; }
+  document.getElementById('print-area').innerHTML = buildPrintHtml(d);
+  const oldTitle = document.title;
+  document.title = 'Site-Ledger-Report-' + todayLocal();
+  document.body.classList.add('printing');
+  const done = () => { document.body.classList.remove('printing'); document.title = oldTitle; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
 
+document.getElementById('delete-modal').addEventListener('click', function (e) { if (e.target === this) closeDeleteModal(); });
 init();
+
 </script>
 </body>
 </html>
